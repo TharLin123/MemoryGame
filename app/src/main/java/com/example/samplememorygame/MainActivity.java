@@ -50,6 +50,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private TextView progressText;
     private int counter = 0;
     private ArrayList<Integer> selection = new ArrayList<>();
+    private int progressBarMax = 20;
 
 
     @Override
@@ -84,9 +85,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 btn.setImageResource(0);
                 btn.setForeground(null);
             }
-            progressBar.setVisibility(View.VISIBLE);
+
             progressBar.setProgress(0);
-            progressText.setText(getString(R.string.progressText,0));
+            progressText.setText("");
+            //progressText.setText(getString(R.string.progressText,0,progressBar.getMax()));
 
            if(bkgdThread !=null){
                bkgdThread.interrupt();
@@ -109,8 +111,24 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                            } else{
                                Document doc = Jsoup.connect(input).get();
                                Elements elements = doc.select("img[src$=.jpg]");
+                               if(elements.size()<6){
+                                   runOnUiThread(new Runnable() {
+                                       @Override
+                                       public void run() {
+                                           progressText.setText("Sorry. There are insufficient images available to" +
+                                                   " start the game. Please try another search.");
+                                       }
+                                   });
+                                   return;
+                               } else if(elements.size()<20){
+                                   progressBarMax = elements.size();
+                                   progressBar.setMax(progressBarMax);
+                               } else{
+                                   progressBarMax = 20;
+                                   progressBar.setMax(progressBarMax);
+                               }
 
-                               for(int i=0; i<20;i++){
+                               for(int i=0; i<progressBarMax;i++){
                                    if(Thread.interrupted()){
                                        runOnUiThread(new Runnable() {
                                            @Override
@@ -119,7 +137,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                                    btn.setImageResource(0);
                                                }
                                                progressBar.setProgress(0);
-                                               progressText.setText(getString(R.string.progressText,0));
+                                               progressText.setText("");
+                                               //progressText.setText(getString(R.string.progressText,0,progressBarMax));
                                            }
                                        });
                                        return;
@@ -131,13 +150,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                    runOnUiThread(new MyRunnable(k,imgBtns,imageToAdd) {
                                        @Override
                                        public void run() {
-                                           imgBtns[k].setImageBitmap(savedImage);
+                                           imgBtns[k].setImageBitmap(imageToAdd);
                                            imgBtns[k].setBackgroundResource(0);
                                            progressBar.setProgressTintList(ColorStateList.valueOf(Color.parseColor("#74F94F")));
                                            progressBar.setVisibility(View.VISIBLE);
                                            progressBar.setProgress(k+1);
                                            if(k+1 < 20){
-                                               progressText.setText(getString(R.string.progressText,k+1));
+                                               progressText.setText(getString(R.string.progressText,k+1,progressBarMax));
                                            } else{
                                                progressText.setText("Please select 6 images to start the game.");
                                            }
@@ -145,6 +164,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                    });
                                }
                            }
+                       }
+                       catch(IllegalArgumentException e){
+                           runOnUiThread(new Runnable() {
+                               @Override
+                               public void run() {
+                                   progressText.setText("Please enter a valid search term");
+                               }
+                           });
                        }
                        catch (Exception e){
                            e.printStackTrace();
@@ -155,10 +182,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         } else if(Arrays.asList(Arrays.stream(imgBtnsID).boxed().toArray(Integer[]::new))
                 .contains(Integer.valueOf(id))){
-            if(progressBar.getProgress() <20){
+            if(progressBar.getProgress() <progressBarMax){
                 Toast.makeText(MainActivity.this, "Please wait for all images to be fully" +
                         " downloaded.", Toast.LENGTH_LONG).show();
-            } else if (progressBar.getProgress() == 20){
+            } else if (progressBar.getProgress() == progressBarMax){
                 Integer selected = Integer.valueOf(getArrayIndex(imgBtnsID,id)+1);
                 ImageButton selectedBtn = findViewById(id);
                 if(!selection.contains(selected)){
@@ -229,10 +256,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
+                    savedImages.clear();
                     for (ImageButton btn : imgBtns){
                         btn.setImageResource(0);
                         progressBar.setProgress(0);
-                        progressText.setText(getString(R.string.progressText,0));
+                        progressText.setText("");
+                        Toast.makeText(MainActivity.this, "Download was interrupted", Toast.LENGTH_LONG);
+                        //progressText.setText(getString(R.string.progressText,0,progressBarMax));
                     }
                 }
             });

@@ -16,7 +16,6 @@ public class MyRunnable implements Runnable{
 
     @Override
     public void run(){
-        imgBtns[k].setImageBitmap(savedImage);
     }
 
 }
